@@ -29,10 +29,15 @@ import (
 const Version = "0.0.1"
 const Priority = 1
 
-var eventType = "io.triggermesh.flow.kong-ce-plugin"
+var eventType = "com.konghq.ce-plugin"
 
 type Config struct {
-	EventType string `json:"eventType"`
+	EventType        string `json:"eventType"`
+	DiscardCEContext bool   `json:"discardCEContext"`
+}
+
+func main() {
+	server.StartServer(New, Version, Priority)
 }
 
 func New() interface{} {
@@ -57,6 +62,35 @@ func (conf *Config) Access(kong *pdk.PDK) {
 	kong.ServiceRequest.SetHeader("ce-specversion", cloudevents.VersionV1)
 }
 
-func main() {
-	server.StartServer(New, Version, Priority)
+func (conf *Config) Response(kong *pdk.PDK) {
+	if !conf.DiscardCEContext {
+		return
+	}
+
+	headers, err := kong.ServiceResponse.GetHeaders(-1)
+	if err != nil {
+	}
+
+	body, err := kong.ServiceResponse.GetRawBody()
+	if err != nil {
+	}
+
+	switch {
+	case isBinaryCE(headers):
+		removeCEHeaders()
+	case isStructuredCE(body):
+		extractData()
+	}
 }
+
+func isBinaryCE(map[string][]string) bool {
+	return false
+}
+
+func isStructuredCE(body string) bool {
+	return false
+}
+
+func removeCEHeaders() {}
+
+func extractData() {}
